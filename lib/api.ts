@@ -27,6 +27,22 @@ export const api = {
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify(body),
     }).then((r) => r.json()),
+  /** Browser Use: automate publishing listing to Facebook Marketplace */
+  publishFacebookMarketplace: (body: {
+    title: string;
+    description: string;
+    price: number;
+    imageUrl?: string;
+  }) =>
+    fetch(`${API_BASE}/publish-facebook-marketplace`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(body),
+    }).then((r) => r.json()),
+  getFacebookMarketplaceTaskStatus: (taskId: string) =>
+    fetch(`${API_BASE}/publish-facebook-marketplace/status/${encodeURIComponent(taskId)}`).then(
+      (r) => r.json()
+    ),
   generateReply: (body: {
     message: string;
     product: { title: string; price: number; min_price?: number };

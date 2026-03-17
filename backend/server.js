@@ -30,6 +30,7 @@ app.get('/', (req, res) => {
       'GET /listings': 'List stored listings',
       'POST /generate-listing': 'Body: { name, condition, category }',
       'POST /create-listing': 'Body: { title, description, price }',
+      'POST /publish-facebook-marketplace': 'Body: { title, description, price [, imageUrl ] }',
       'POST /generate-reply': 'Body: { message, product: { title, price, min_price? } }',
       'POST /webhook/message': 'Body: { message, product? }',
     },

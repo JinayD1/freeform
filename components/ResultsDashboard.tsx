@@ -56,6 +56,9 @@ export function ResultsDashboard({
   const [replyLoading, setReplyLoading] = useState(false);
   const [publishStatus, setPublishStatus] = useState<"idle" | "loading" | "done" | "error">("idle");
   const [publishError, setPublishError] = useState<string | null>(null);
+  const [fbStatus, setFbStatus] = useState<"idle" | "loading" | "done" | "error">("idle");
+  const [fbError, setFbError] = useState<string | null>(null);
+  const [fbTaskId, setFbTaskId] = useState<string | null>(null);
   const [copied, setCopied] = useState(false);
 
   const handleCopyListing = () => {
@@ -79,6 +82,25 @@ export function ResultsDashboard({
     } catch (err) {
       setPublishStatus("error");
       setPublishError(err instanceof Error ? err.message : "Publish failed");
+    }
+  };
+
+  const handlePublishFacebook = async () => {
+    setFbStatus("loading");
+    setFbError(null);
+    setFbTaskId(null);
+    try {
+      const result = await api.publishFacebookMarketplace({
+        title: listing.title,
+        description: listing.description,
+        price: listing.price,
+      });
+      if (result.error) throw new Error(result.error);
+      setFbTaskId(result.taskId ?? null);
+      setFbStatus("done");
+    } catch (err) {
+      setFbStatus("error");
+      setFbError(err instanceof Error ? err.message : "Facebook Marketplace publish failed");
     }
   };
 
@@ -280,9 +302,21 @@ export function ResultsDashboard({
           </button>
           <button
             type="button"
-            className="inline-flex items-center gap-2 rounded-xl border border-border bg-surface px-5 py-3 text-sm font-medium text-ink-light transition-all hover:border-[#1877F2] hover:text-[#1877F2]"
+            onClick={handlePublishFacebook}
+            disabled={fbStatus === "loading" || fbStatus === "done"}
+            className={`inline-flex items-center gap-2 rounded-xl px-5 py-3 text-sm font-medium transition-all disabled:opacity-60 ${
+              fbStatus === "done"
+                ? "border border-sage bg-sage text-white"
+                : "border border-border bg-surface text-ink-light hover:border-[#1877F2] hover:text-[#1877F2]"
+            }`}
           >
-            Facebook
+            {fbStatus === "loading" ? (
+              "Starting browser..."
+            ) : fbStatus === "done" ? (
+              "Browser creating listing"
+            ) : (
+              "Publish to Facebook Marketplace"
+            )}
           </button>
           <button
             type="button"
@@ -291,9 +325,14 @@ export function ResultsDashboard({
             eBay
           </button>
         </div>
-        {publishStatus === "error" && publishError && (
-          <p className="mt-3 text-sm text-red-600">{publishError}</p>
+        {fbStatus === "done" && fbTaskId && (
+          <p className="mt-2 text-sm text-ink-muted">
+            Task ID: {fbTaskId}. A browser session is filling the listing on Facebook Marketplace; you may need to sign in or complete the photo step manually.
+          </p>
         )}
+        {(publishStatus === "error" && publishError) || (fbStatus === "error" && fbError) ? (
+          <p className="mt-3 text-sm text-red-600">{publishError ?? fbError}</p>
+        ) : null}
       </Card>
 
       {/* Buyer Negotiation */}

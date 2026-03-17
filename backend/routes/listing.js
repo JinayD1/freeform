@@ -3,6 +3,7 @@ const router = express.Router();
 const { buildListingPrompt, buildVisionListingPrompt, buildEtsySimulationPrompt } = require('../utils/promptBuilder');
 const { generateWithGemini, generateWithGeminiVision, parseJsonFromResponse } = require('../services/gemini');
 const { createListing } = require('../services/etsy');
+const { runFacebookMarketplaceTask, getTaskStatus } = require('../services/browserUse');
 const store = require('../services/store');
 
 /** Random int in [min, max] for synthetic Etsy stats */
@@ -123,6 +124,63 @@ router.post('/create-listing', async (req, res) => {
     });
   } catch (err) {
     console.error('create-listing error:', err.message);
+    return res.status(500).json({ error: err.message });
+  }
+});
+
+/**
+ * POST /publish-facebook-marketplace
+ * Uses Browser Use to automate creating a listing on Facebook Marketplace.
+ * Body: { title, description, price [, imageUrl ] }
+ * Returns: { taskId, sessionId, status } for polling optional GET /publish-facebook-marketplace/status/:taskId
+ */
+router.post('/publish-facebook-marketplace', async (req, res) => {
+  try {
+    const { title, description, price, imageUrl } = req.body || {};
+    if (!title || description == null || price == null) {
+      return res.status(400).json({
+        error: 'Missing required fields',
+        required: ['title', 'description', 'price'],
+      });
+    }
+
+    const numPrice = typeof price === 'number' ? price : parseFloat(price);
+    if (Number.isNaN(numPrice) || numPrice < 0) {
+      return res.status(400).json({ error: 'Invalid price' });
+    }
+
+    const result = await runFacebookMarketplaceTask({
+      title: String(title).trim(),
+      description: String(description).trim(),
+      price: numPrice,
+      imageUrl: imageUrl ? String(imageUrl).trim() : undefined,
+    });
+
+    return res.json({
+      taskId: result.taskId,
+      sessionId: result.sessionId,
+      status: result.status,
+    });
+  } catch (err) {
+    console.error('publish-facebook-marketplace error:', err.message);
+    return res.status(500).json({ error: err.message });
+  }
+});
+
+/**
+ * GET /publish-facebook-marketplace/status/:taskId
+ * Poll Browser Use task status (optional).
+ */
+router.get('/publish-facebook-marketplace/status/:taskId', async (req, res) => {
+  try {
+    const { taskId } = req.params;
+    if (!taskId) {
+      return res.status(400).json({ error: 'Missing taskId' });
+    }
+    const result = await getTaskStatus(taskId);
+    return res.json(result);
+  } catch (err) {
+    console.error('publish-facebook-marketplace status error:', err.message);
     return res.status(500).json({ error: err.message });
   }
 });
