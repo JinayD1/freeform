@@ -63,14 +63,14 @@ export function EtsyChatbot({
   };
 
   return (
-    <div className="w-full max-w-lg animate-fade-in-up">
+    <div className="w-full max-w-lg animate-fade-in-up flex flex-col" style={{ maxHeight: "calc(100vh - 220px)" }}>
       {/* Chat header */}
-      <div className="mb-4 text-center">
+      <div className="mb-4 text-center shrink-0">
         <h2 className="font-serif text-2xl text-ink">Etsy Assistant</h2>
         <p className="mt-1 text-sm text-ink-muted">Simulated listing updates for your demo</p>
       </div>
 
-      <div className="overflow-hidden rounded-2xl border border-border bg-surface shadow-lg">
+      <div className="overflow-hidden rounded-2xl border border-border bg-surface shadow-lg flex flex-col min-h-0 flex-1">
         {/* Status bar */}
         <div className="flex items-center gap-3 border-b border-border-light bg-cream px-5 py-3.5">
           <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-etsy text-white shadow-sm">
@@ -88,7 +88,7 @@ export function EtsyChatbot({
         </div>
 
         {/* Messages */}
-        <div ref={scrollRef} className="flex flex-col gap-3 p-5 min-h-[240px] max-h-[380px] overflow-y-auto">
+        <div ref={scrollRef} className="flex flex-col gap-3 p-5 min-h-0 flex-1 overflow-y-auto">
           {chat.map((m, i) => (
             <div
               key={i}
@@ -120,7 +120,7 @@ export function EtsyChatbot({
         </div>
 
         {/* Input area */}
-        <div className="border-t border-border-light bg-cream/50 px-5 py-4 space-y-3">
+        <div className="border-t border-border-light bg-cream/50 px-5 py-4 space-y-3 shrink-0">
           {/* Quick suggestions */}
           <div className="flex flex-wrap gap-2">
             {suggestions.map((s) => (
@@ -167,7 +167,7 @@ export function EtsyChatbot({
           <button
             type="button"
             onClick={onComplete}
-            className="w-full rounded-xl bg-amber px-4 py-3 text-sm font-semibold text-white shadow-sm transition-all hover:bg-amber-dark hover:shadow-md"
+            className="w-full rounded-xl bg-ink px-4 py-3 text-sm font-semibold text-cream shadow-sm transition-all hover:bg-ink-light hover:shadow-md"
           >
             Continue to results
           </button>

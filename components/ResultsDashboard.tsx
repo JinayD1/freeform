@@ -54,8 +54,6 @@ export function ResultsDashboard({
   const [buyerMessage, setBuyerMessage] = useState("");
   const [aiReply, setAiReply] = useState<string | null>(null);
   const [replyLoading, setReplyLoading] = useState(false);
-  const [publishStatus, setPublishStatus] = useState<"idle" | "loading" | "done" | "error">("idle");
-  const [publishError, setPublishError] = useState<string | null>(null);
   const [copied, setCopied] = useState(false);
 
   const handleCopyListing = () => {
@@ -63,23 +61,6 @@ export function ResultsDashboard({
     void navigator.clipboard.writeText(text);
     setCopied(true);
     setTimeout(() => setCopied(false), 2000);
-  };
-
-  const handlePublishEtsy = async () => {
-    setPublishStatus("loading");
-    setPublishError(null);
-    try {
-      const result = await api.createListing({
-        title: listing.title,
-        description: listing.description,
-        price: listing.price,
-      });
-      if (result.error) throw new Error(result.error);
-      setPublishStatus("done");
-    } catch (err) {
-      setPublishStatus("error");
-      setPublishError(err instanceof Error ? err.message : "Publish failed");
-    }
   };
 
   const handleGenerateReply = async () => {
@@ -243,57 +224,26 @@ export function ResultsDashboard({
         </div>
       </Card>
 
-      {/* Publish */}
+      {/* Post Listing */}
       <Card
         title="Publish"
         icon={<svg className="h-4 w-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2} strokeLinecap="round" strokeLinejoin="round"><path d="M4 12v8a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2v-8" /><polyline points="16 6 12 2 8 6" /><line x1="12" y1="2" x2="12" y2="15" /></svg>}
       >
         <p className="mb-4 text-sm text-ink-muted">
-          Post this listing to your preferred marketplace.
+          Post this listing to a marketplace when you're ready.
         </p>
-        <div className="flex flex-wrap gap-3">
-          <button
-            type="button"
-            onClick={handlePublishEtsy}
-            disabled={publishStatus === "loading" || publishStatus === "done"}
-            className={`inline-flex items-center gap-2.5 rounded-xl px-5 py-3 text-sm font-semibold text-white shadow-sm transition-all disabled:opacity-60 ${
-              publishStatus === "done"
-                ? "bg-sage"
-                : "bg-etsy hover:shadow-md hover:shadow-etsy/20"
-            }`}
-          >
-            <svg className="h-4 w-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2} strokeLinecap="round" strokeLinejoin="round">
-              {publishStatus === "done" ? (
-                <polyline points="20 6 9 17 4 12" />
-              ) : (
-                <>
-                  <path d="M20.59 13.41l-7.17 7.17a2 2 0 01-2.83 0L2 12V2h10l8.59 8.59a2 2 0 010 2.82z" />
-                  <line x1="7" y1="7" x2="7.01" y2="7" />
-                </>
-              )}
-            </svg>
-            {publishStatus === "loading"
-              ? "Publishing..."
-              : publishStatus === "done"
-                ? "Published to Etsy"
-                : "Publish to Etsy"}
-          </button>
-          <button
-            type="button"
-            className="inline-flex items-center gap-2 rounded-xl border border-border bg-surface px-5 py-3 text-sm font-medium text-ink-light transition-all hover:border-[#1877F2] hover:text-[#1877F2]"
-          >
-            Facebook
-          </button>
-          <button
-            type="button"
-            className="inline-flex items-center gap-2 rounded-xl border border-border bg-surface px-5 py-3 text-sm font-medium text-ink-light transition-all hover:border-[#E53238] hover:text-[#E53238]"
-          >
-            eBay
-          </button>
-        </div>
-        {publishStatus === "error" && publishError && (
-          <p className="mt-3 text-sm text-red-600">{publishError}</p>
-        )}
+        <button
+          type="button"
+          className="inline-flex items-center gap-2.5 rounded-xl bg-amber px-6 py-3 text-sm font-semibold text-white shadow-sm transition-all hover:bg-amber-dark hover:shadow-md cursor-default"
+          onClick={() => {/* Coming soon */}}
+        >
+          <svg className="h-4 w-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2} strokeLinecap="round" strokeLinejoin="round">
+            <path d="M4 12v8a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2v-8" />
+            <polyline points="16 6 12 2 8 6" />
+            <line x1="12" y1="2" x2="12" y2="15" />
+          </svg>
+          Post Listing
+        </button>
       </Card>
 
       {/* Buyer Negotiation */}
