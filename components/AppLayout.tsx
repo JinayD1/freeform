@@ -20,6 +20,14 @@ type FlowStep = "upload" | "details" | "generating" | "chatbot" | "results";
 const CONDITION_OPTIONS = ["Used", "Like New", "Good", "Fair", "Refurbished"];
 const CATEGORY_OPTIONS = ["Electronics", "Clothing", "Home & Living", "Collectibles", "Furniture", "Other"];
 
+const STEPS: { key: FlowStep; label: string; num: number }[] = [
+  { key: "upload", label: "Upload", num: 1 },
+  { key: "details", label: "Details", num: 2 },
+  { key: "generating", label: "Generate", num: 3 },
+  { key: "chatbot", label: "Assistant", num: 4 },
+  { key: "results", label: "Results", num: 5 },
+];
+
 /** Resize image to maxDim on longest side and return base64 + mime. */
 async function resizeAndEncode(
   file: File,
@@ -48,6 +56,72 @@ async function resizeAndEncode(
   });
 }
 
+/* ── Step Progress Indicator ── */
+function StepProgress({ current }: { current: FlowStep }) {
+  const currentIdx = STEPS.findIndex((s) => s.key === current);
+
+  return (
+    <div className="w-full max-w-xl mx-auto px-2">
+      <div className="flex items-center justify-between">
+        {STEPS.map((s, i) => {
+          const done = i < currentIdx;
+          const active = i === currentIdx;
+          return (
+            <div key={s.key} className="flex flex-1 items-center">
+              {/* Node */}
+              <div className="flex flex-col items-center gap-1.5 relative z-10">
+                <div
+                  className={`
+                    flex h-9 w-9 items-center justify-center rounded-full text-xs font-semibold
+                    transition-all duration-500 ease-out
+                    ${done
+                      ? "bg-amber text-white shadow-md shadow-amber/25"
+                      : active
+                        ? "bg-ink text-cream shadow-lg shadow-ink/20 scale-110"
+                        : "bg-cream-dark text-ink-faint border border-border"
+                    }
+                  `}
+                >
+                  {done ? (
+                    <svg className="h-4 w-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={3} strokeLinecap="round" strokeLinejoin="round">
+                      <polyline points="20 6 9 17 4 12" />
+                    </svg>
+                  ) : (
+                    s.num
+                  )}
+                </div>
+                <span
+                  className={`
+                    text-[10px] font-medium tracking-wide uppercase whitespace-nowrap
+                    transition-colors duration-300
+                    ${done ? "text-amber" : active ? "text-ink" : "text-ink-faint"}
+                  `}
+                >
+                  {s.label}
+                </span>
+              </div>
+
+              {/* Connector line */}
+              {i < STEPS.length - 1 && (
+                <div className="flex-1 mx-1.5 mb-5">
+                  <div className="h-[2px] w-full rounded-full bg-cream-dark overflow-hidden">
+                    <div
+                      className={`
+                        h-full rounded-full bg-amber transition-all duration-700 ease-out
+                        ${i < currentIdx ? "w-full" : "w-0"}
+                      `}
+                    />
+                  </div>
+                </div>
+              )}
+            </div>
+          );
+        })}
+      </div>
+    </div>
+  );
+}
+
 export function AppLayout() {
   const [step, setStep] = useState<FlowStep>("upload");
   const [selectedFile, setSelectedFile] = useState<File | null>(null);
@@ -63,14 +137,12 @@ export function AppLayout() {
       setPreviewUrl(null);
       return;
     }
-
     const url = URL.createObjectURL(selectedFile);
     setPreviewUrl(url);
     if (!itemName.trim()) {
       const base = selectedFile.name.replace(/\.[^.]+$/, "").replace(/[-_]/g, " ") || "Item";
       setItemName(base);
     }
-
     return () => {
       URL.revokeObjectURL(url);
     };
@@ -117,125 +189,167 @@ export function AppLayout() {
     }
   }, [itemName, condition, category, selectedFile]);
 
-  const title = useMemo(() => {
+  const stepTitle = useMemo(() => {
     switch (step) {
-      case "details":
-        return "Describe your item";
-      case "generating":
-        return "Generating your listing";
-      case "chatbot":
-        return "Listing on Etsy";
-      case "results":
-        return "Your AI-generated listing";
-      default:
-        return "AI Resale Listing Generator";
+      case "upload": return "Upload your product photo";
+      case "details": return "Describe your item";
+      case "generating": return "Crafting your listing";
+      case "chatbot": return "Etsy Assistant";
+      case "results": return "Your listing is ready";
     }
   }, [step]);
 
-  const subtitle = useMemo(() => {
+  const stepSubtitle = useMemo(() => {
     switch (step) {
-      case "upload":
-        return "Upload a product photo, then add details to generate a resale listing.";
-      case "details":
-        return "We’ll use your photo to recognize the item (e.g. Coke can, vintage camera). Add details below to improve the listing.";
-      case "generating":
-        return "Drafting a compelling title, description, and pricing.";
-      case "chatbot":
-        return "Simulated Etsy updates for your demo.";
-      case "results":
-        return "Review, tweak, and publish to Etsy or copy the listing.";
-      default:
-        return "";
+      case "upload": return "We'll use AI to recognize the item and generate a professional resale listing.";
+      case "details": return "Add details to help AI create an accurate, optimized listing.";
+      case "generating": return "Our AI is writing a compelling title, description, and pricing.";
+      case "chatbot": return "Simulated Etsy updates for your demo.";
+      case "results": return "Review, tweak, and publish to your preferred marketplace.";
     }
   }, [step]);
 
   return (
-    <div className="flex min-h-screen flex-col bg-slate-50">
+    <div className="noise-bg flex min-h-screen flex-col bg-cream">
       <Header />
-      <main
-            className={`flex flex-1 flex-col items-center px-4 py-8 sm:px-6 ${step === "results" ? "justify-start" : step === "chatbot" ? "justify-start" : "justify-center"}`}
-          >
-        <div
-            className={`flex w-full flex-col items-center gap-8 ${step === "results" || step === "chatbot" ? "max-w-5xl" : "max-w-4xl"}`}
-          >
-          {step !== "results" && step !== "chatbot" && (
-            <div className="text-center">
-              <h1 className="text-2xl font-semibold tracking-tight text-slate-900 sm:text-3xl">
-                {title}
+
+      <main className="flex flex-1 flex-col items-center px-4 py-6 sm:px-6">
+        <div className="w-full max-w-5xl flex flex-col items-center">
+
+          {/* Step progress — always visible */}
+          <div className="w-full mb-8 mt-2">
+            <StepProgress current={step} />
+          </div>
+
+          {/* Page title — hidden on results (it has its own header) */}
+          {step !== "results" && (
+            <div className="text-center mb-8 animate-fade-in-up">
+              <h1 className="font-serif text-2xl text-ink sm:text-3xl">
+                {stepTitle}
               </h1>
-              <p className="mt-2 text-sm text-slate-600 sm:text-base">{subtitle}</p>
+              <p className="mt-2 text-sm text-ink-muted max-w-md mx-auto">
+                {stepSubtitle}
+              </p>
             </div>
           )}
 
+          {/* ── Upload ── */}
           {step === "upload" && (
-            <div className="w-full flex justify-center transition-opacity duration-300 ease-out">
+            <div className="w-full flex justify-center">
               <UploadDropzone onFiles={handleFiles} />
             </div>
           )}
 
+          {/* ── Details ── */}
           {step === "details" && (
-            <div className="w-full max-w-xl space-y-6">
+            <div className="w-full max-w-lg animate-fade-in-up">
+              {/* Image preview */}
               {previewUrl && (
-                <div className="mx-auto aspect-square w-32 overflow-hidden rounded-lg border border-slate-200 bg-slate-50">
+                <div className="mx-auto mb-6 h-40 w-40 overflow-hidden rounded-2xl border border-border bg-cream shadow-sm">
                   <img src={previewUrl} alt="Upload" className="h-full w-full object-cover" />
                 </div>
               )}
-              <div className="space-y-4 rounded-xl border border-slate-200 bg-white p-5 shadow-sm">
+
+              {/* Form card */}
+              <div className="rounded-2xl border border-border bg-surface p-6 shadow-sm space-y-5">
+                {/* Item name */}
                 <div>
-                  <label className="block text-sm font-medium text-slate-700">Item name</label>
+                  <label className="block text-xs font-semibold uppercase tracking-widest text-ink-muted mb-2">
+                    Item name
+                  </label>
                   <input
                     type="text"
                     value={itemName}
                     onChange={(e) => setItemName(e.target.value)}
                     placeholder="e.g. Vintage Sony Walkman"
-                    className="mt-1 w-full rounded-lg border border-slate-200 px-3 py-2 text-slate-900 shadow-sm focus:border-slate-400 focus:outline-none focus:ring-1 focus:ring-slate-400"
+                    className="w-full rounded-xl border border-border bg-cream/50 px-4 py-3 text-sm text-ink placeholder:text-ink-faint focus:border-amber focus:outline-none focus:ring-2 focus:ring-amber/20 transition-all"
                   />
                 </div>
-                <div>
-                  <label className="block text-sm font-medium text-slate-700">Condition</label>
-                  <select
-                    value={condition}
-                    onChange={(e) => setCondition(e.target.value)}
-                    className="mt-1 w-full rounded-lg border border-slate-200 px-3 py-2 text-slate-900 shadow-sm focus:border-slate-400 focus:outline-none focus:ring-1 focus:ring-slate-400"
-                  >
-                    {CONDITION_OPTIONS.map((c) => (
-                      <option key={c} value={c}>{c}</option>
-                    ))}
-                  </select>
+
+                {/* Condition & Category row */}
+                <div className="grid grid-cols-2 gap-4">
+                  <div>
+                    <label className="block text-xs font-semibold uppercase tracking-widest text-ink-muted mb-2">
+                      Condition
+                    </label>
+                    <select
+                      value={condition}
+                      onChange={(e) => setCondition(e.target.value)}
+                      className="w-full rounded-xl border border-border bg-cream/50 px-4 py-3 text-sm text-ink focus:border-amber focus:outline-none focus:ring-2 focus:ring-amber/20 transition-all appearance-none cursor-pointer"
+                    >
+                      {CONDITION_OPTIONS.map((c) => (
+                        <option key={c} value={c}>{c}</option>
+                      ))}
+                    </select>
+                  </div>
+                  <div>
+                    <label className="block text-xs font-semibold uppercase tracking-widest text-ink-muted mb-2">
+                      Category
+                    </label>
+                    <select
+                      value={category}
+                      onChange={(e) => setCategory(e.target.value)}
+                      className="w-full rounded-xl border border-border bg-cream/50 px-4 py-3 text-sm text-ink focus:border-amber focus:outline-none focus:ring-2 focus:ring-amber/20 transition-all appearance-none cursor-pointer"
+                    >
+                      {CATEGORY_OPTIONS.map((c) => (
+                        <option key={c} value={c}>{c}</option>
+                      ))}
+                    </select>
+                  </div>
                 </div>
-                <div>
-                  <label className="block text-sm font-medium text-slate-700">Category</label>
-                  <select
-                    value={category}
-                    onChange={(e) => setCategory(e.target.value)}
-                    className="mt-1 w-full rounded-lg border border-slate-200 px-3 py-2 text-slate-900 shadow-sm focus:border-slate-400 focus:outline-none focus:ring-1 focus:ring-slate-400"
-                  >
-                    {CATEGORY_OPTIONS.map((c) => (
-                      <option key={c} value={c}>{c}</option>
-                    ))}
-                  </select>
-                </div>
+
+                {/* Error */}
                 {apiError && (
-                  <p className="text-sm text-red-600" role="alert">{apiError}</p>
+                  <div className="flex items-start gap-2 rounded-xl bg-red-50 px-4 py-3 border border-red-100">
+                    <svg className="h-4 w-4 mt-0.5 text-red-500 shrink-0" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2} strokeLinecap="round" strokeLinejoin="round">
+                      <circle cx="12" cy="12" r="10" />
+                      <line x1="12" y1="8" x2="12" y2="12" />
+                      <line x1="12" y1="16" x2="12.01" y2="16" />
+                    </svg>
+                    <p className="text-sm text-red-700" role="alert">{apiError}</p>
+                  </div>
                 )}
+
+                {/* Generate button */}
                 <button
                   type="button"
                   onClick={handleGenerateListing}
-                  className="w-full rounded-lg bg-slate-900 px-4 py-3 text-sm font-medium text-white shadow-sm transition hover:bg-slate-800"
+                  className="group w-full flex items-center justify-center gap-2.5 rounded-xl bg-amber px-4 py-3.5 text-sm font-semibold text-white shadow-sm transition-all hover:bg-amber-dark hover:shadow-md hover:shadow-amber/20"
                 >
+                  <svg className="h-4 w-4 transition-transform group-hover:rotate-12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2} strokeLinecap="round" strokeLinejoin="round">
+                    <path d="M9.813 15.904L9 18.75l-.813-2.846a4.5 4.5 0 00-3.09-3.09L2.25 12l2.846-.813a4.5 4.5 0 003.09-3.09L9 5.25l.813 2.846a4.5 4.5 0 003.09 3.09L15.75 12l-2.846.813a4.5 4.5 0 00-3.09 3.09zM18.259 8.715L18 9.75l-.259-1.035a3.375 3.375 0 00-2.455-2.456L14.25 6l1.036-.259a3.375 3.375 0 002.455-2.456L18 2.25l.259 1.035a3.375 3.375 0 002.455 2.456L21.75 6l-1.036.259a3.375 3.375 0 00-2.455 2.456z" />
+                  </svg>
                   Generate listing with AI
                 </button>
               </div>
+
+              {/* Back link */}
+              <button
+                type="button"
+                onClick={() => {
+                  setStep("upload");
+                  setSelectedFile(null);
+                }}
+                className="mt-4 flex items-center gap-1.5 mx-auto text-sm text-ink-muted hover:text-amber transition-colors"
+              >
+                <svg className="h-3.5 w-3.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2} strokeLinecap="round" strokeLinejoin="round">
+                  <line x1="19" y1="12" x2="5" y2="12" />
+                  <polyline points="12 19 5 12 12 5" />
+                </svg>
+                Choose a different photo
+              </button>
             </div>
           )}
 
+          {/* ── Generating ── */}
           {step === "generating" && (
             <LoadingState
-              label="Generating listing..."
-              helper="Writing a polished title and description tailored for resale."
+              label="Crafting your listing..."
+              helper="Writing a polished title, description, and pricing tailored for resale."
             />
           )}
 
+          {/* ── Chatbot ── */}
           {step === "chatbot" && listing && (
             <EtsyChatbot
               listingTitle={listing.title}
@@ -243,6 +357,7 @@ export function AppLayout() {
             />
           )}
 
+          {/* ── Results ── */}
           {step === "results" && listing && (
             <ResultsDashboard
               previewUrl={previewUrl}
@@ -254,12 +369,17 @@ export function AppLayout() {
                 setStep("upload");
                 setListing(null);
                 setSelectedFile(null);
+                setItemName("");
               }}
             />
           )}
         </div>
       </main>
+
+      {/* Footer */}
+      <footer className="border-t border-border py-4 text-center text-xs text-ink-faint">
+        Resale List — AI-powered listing generator
+      </footer>
     </div>
   );
 }
-
