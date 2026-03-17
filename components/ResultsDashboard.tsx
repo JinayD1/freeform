@@ -1,11 +1,11 @@
 "use client";
 
+import { useState } from "react";
+import { api } from "@/lib/api";
+import type { GeneratedListing } from "./AppLayout";
 import {
-  MOCK_LISTING,
   MOCK_COMPARABLES,
   SUGGESTED_AVERAGE_PRICE,
-  MOCK_BUYER_MESSAGE,
-  MOCK_AI_REPLY,
 } from "@/lib/mockResults";
 
 const CARD_CLASS =
@@ -33,12 +33,67 @@ function Card({
 export function ResultsDashboard({
   previewUrl,
   imageAlt,
+  listing,
+  condition,
+  category,
   onStartOver,
 }: {
   previewUrl: string | null;
   imageAlt: string;
+  listing: GeneratedListing;
+  condition: string;
+  category: string;
   onStartOver: () => void;
 }) {
+  const [buyerMessage, setBuyerMessage] = useState("");
+  const [aiReply, setAiReply] = useState<string | null>(null);
+  const [replyLoading, setReplyLoading] = useState(false);
+  const [publishStatus, setPublishStatus] = useState<"idle" | "loading" | "done" | "error">("idle");
+  const [publishError, setPublishError] = useState<string | null>(null);
+
+  const handleCopyListing = () => {
+    const text = `${listing.title}\n\n$${listing.price}\n${listing.description}`;
+    void navigator.clipboard.writeText(text);
+  };
+
+  const handlePublishEtsy = async () => {
+    setPublishStatus("loading");
+    setPublishError(null);
+    try {
+      const result = await api.createListing({
+        title: listing.title,
+        description: listing.description,
+        price: listing.price,
+      });
+      if (result.error) throw new Error(result.error);
+      setPublishStatus("done");
+    } catch (err) {
+      setPublishStatus("error");
+      setPublishError(err instanceof Error ? err.message : "Publish failed");
+    }
+  };
+
+  const handleGenerateReply = async () => {
+    if (!buyerMessage.trim()) return;
+    setReplyLoading(true);
+    setAiReply(null);
+    try {
+      const result = await api.generateReply({
+        message: buyerMessage.trim(),
+        product: {
+          title: listing.title,
+          price: listing.price,
+          min_price: Math.round(listing.price * 0.75),
+        },
+      });
+      if (result.error) throw new Error(result.error);
+      setAiReply(result.reply ?? "");
+    } catch (err) {
+      setAiReply(err instanceof Error ? err.message : "Could not generate reply.");
+    } finally {
+      setReplyLoading(false);
+    }
+  };
   return (
     <div className="w-full max-w-5xl space-y-6">
       <div className="flex flex-col items-start justify-between gap-4 sm:flex-row sm:items-center">
@@ -76,7 +131,7 @@ export function ResultsDashboard({
             )}
           </div>
           <p className="mt-3 text-xs text-slate-500">
-            Your uploaded photo. AI enhancement can be added when backend is connected.
+            Your uploaded photo. Listing was generated from your item details.
           </p>
         </Card>
 
@@ -88,7 +143,7 @@ export function ResultsDashboard({
                 Title
               </p>
               <p className="mt-1 font-semibold text-slate-900">
-                {MOCK_LISTING.title}
+                {listing.title}
               </p>
             </div>
             <div className="flex flex-wrap gap-4">
@@ -97,7 +152,7 @@ export function ResultsDashboard({
                   Price
                 </p>
                 <p className="mt-1 text-xl font-bold text-slate-900">
-                  ${MOCK_LISTING.price}
+                  ${listing.price}
                 </p>
               </div>
               <div>
@@ -105,7 +160,7 @@ export function ResultsDashboard({
                   Category
                 </p>
                 <p className="mt-1 text-sm text-slate-700">
-                  {MOCK_LISTING.category}
+                  {category}
                 </p>
               </div>
               <div>
@@ -113,7 +168,7 @@ export function ResultsDashboard({
                   Condition
                 </p>
                 <p className="mt-1 text-sm text-slate-700">
-                  {MOCK_LISTING.condition}
+                  {condition}
                 </p>
               </div>
             </div>
@@ -122,11 +177,22 @@ export function ResultsDashboard({
                 Description
               </p>
               <p className="mt-1 text-sm leading-relaxed text-slate-700">
-                {MOCK_LISTING.description}
+                {listing.description}
               </p>
             </div>
+            {listing.tags?.length > 0 && (
+              <div>
+                <p className="text-xs font-medium uppercase tracking-wide text-slate-400">
+                  Tags
+                </p>
+                <p className="mt-1 text-sm text-slate-600">
+                  {listing.tags.join(", ")}
+                </p>
+              </div>
+            )}
             <button
               type="button"
+              onClick={handleCopyListing}
               className="rounded-lg bg-slate-900 px-4 py-2 text-sm font-medium text-white shadow-sm transition hover:bg-slate-800"
             >
               Copy listing
@@ -168,9 +234,24 @@ export function ResultsDashboard({
       {/* 4. Publish Listing */}
       <Card title="Publish Listing">
         <p className="mb-4 text-sm text-slate-600">
-          Post this listing to one or more marketplaces.
+          Post this listing to Etsy (or copy above and use other marketplaces).
         </p>
         <div className="flex flex-wrap gap-3">
+          <button
+            type="button"
+            onClick={handlePublishEtsy}
+            disabled={publishStatus === "loading"}
+            className="inline-flex items-center gap-2 rounded-lg border border-slate-200 bg-[#F56400] px-4 py-2.5 text-sm font-medium text-white shadow-sm transition hover:bg-[#e55a00] disabled:opacity-50"
+          >
+            {publishStatus === "loading"
+              ? "Publishing…"
+              : publishStatus === "done"
+                ? "Published to Etsy"
+                : "Publish to Etsy"}
+          </button>
+          {publishStatus === "error" && publishError && (
+            <p className="w-full text-sm text-red-600">{publishError}</p>
+          )}
           <button
             type="button"
             className="inline-flex items-center gap-2 rounded-lg border border-slate-200 bg-white px-4 py-2.5 text-sm font-medium text-slate-700 shadow-sm transition hover:bg-slate-50"
@@ -185,41 +266,42 @@ export function ResultsDashboard({
             <span className="font-bold text-[#E53238]">e</span>
             eBay
           </button>
-          <button
-            type="button"
-            className="inline-flex items-center gap-2 rounded-lg border border-slate-200 bg-white px-4 py-2.5 text-sm font-medium text-slate-700 shadow-sm transition hover:bg-slate-50"
-          >
-            <span className="font-bold text-[#00A878]">O</span>
-            OfferUp
-          </button>
         </div>
       </Card>
 
       {/* 5. Buyer Negotiation Simulator */}
       <Card title="Buyer Negotiation Simulator">
         <p className="mb-4 text-sm text-slate-600">
-          Paste a buyer message and get an AI-suggested reply.
+          Paste a buyer message and get an AI-suggested reply (respects minimum price).
         </p>
         <div className="space-y-4">
-          <div className="rounded-lg border border-slate-200 bg-slate-50/80 p-4">
-            <p className="mb-1 text-xs font-medium uppercase tracking-wide text-slate-500">
+          <div>
+            <label className="mb-1 block text-xs font-medium uppercase tracking-wide text-slate-500">
               Buyer message
-            </p>
-            <p className="text-sm text-slate-800">{MOCK_BUYER_MESSAGE}</p>
+            </label>
+            <textarea
+              value={buyerMessage}
+              onChange={(e) => setBuyerMessage(e.target.value)}
+              placeholder="e.g. Will you take $40? Is shipping included?"
+              rows={3}
+              className="w-full rounded-lg border border-slate-200 bg-slate-50/80 px-3 py-2 text-sm text-slate-800 focus:border-slate-400 focus:outline-none focus:ring-1 focus:ring-slate-400"
+            />
           </div>
-          <div className="rounded-lg border border-slate-200 bg-white p-4 shadow-sm">
-            <p className="mb-1 text-xs font-medium uppercase tracking-wide text-slate-500">
-              AI suggested reply
-            </p>
-            <p className="text-sm leading-relaxed text-slate-800">
-              {MOCK_AI_REPLY}
-            </p>
-          </div>
+          {aiReply !== null && (
+            <div className="rounded-lg border border-slate-200 bg-white p-4 shadow-sm">
+              <p className="mb-1 text-xs font-medium uppercase tracking-wide text-slate-500">
+                AI suggested reply
+              </p>
+              <p className="text-sm leading-relaxed text-slate-800">{aiReply}</p>
+            </div>
+          )}
           <button
             type="button"
-            className="w-full rounded-lg bg-slate-900 px-4 py-3 text-sm font-medium text-white shadow-sm transition hover:bg-slate-800 sm:w-auto"
+            onClick={handleGenerateReply}
+            disabled={replyLoading || !buyerMessage.trim()}
+            className="w-full rounded-lg bg-slate-900 px-4 py-3 text-sm font-medium text-white shadow-sm transition hover:bg-slate-800 disabled:opacity-50 sm:w-auto"
           >
-            Generate & Apply
+            {replyLoading ? "Generating…" : "Generate reply"}
           </button>
         </div>
       </Card>
