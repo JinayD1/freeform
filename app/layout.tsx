@@ -1,5 +1,6 @@
 import type { Metadata } from "next";
 import "./globals.css";
+import { ResaleBackground } from "@/components/ResaleBackground";
 
 export const metadata: Metadata = {
   title: "Resale List — AI Listing Generator",
@@ -13,7 +14,12 @@ export default function RootLayout({
 }) {
   return (
     <html lang="en">
-      <body className="antialiased">{children}</body>
+      <body className="antialiased">
+        <div className="bg-cinematic-base" aria-hidden />
+        <ResaleBackground />
+        <div className="bg-grain" aria-hidden />
+        {children}
+      </body>
     </html>
   );
 }
