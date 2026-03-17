@@ -57,7 +57,7 @@ async function resizeAndEncode(
 }
 
 /* ── Step Progress Indicator ── */
-function StepProgress({ current }: { current: FlowStep }) {
+function StepProgress({ current, onGoTo }: { current: FlowStep; onGoTo: (step: FlowStep) => void }) {
   const currentIdx = STEPS.findIndex((s) => s.key === current);
 
   return (
@@ -69,16 +69,19 @@ function StepProgress({ current }: { current: FlowStep }) {
           return (
             <div key={s.key} className="flex flex-1 items-center">
               {/* Node */}
-              <div className="flex flex-col items-center gap-1.5 relative z-10">
+              <div
+                className={`flex flex-col items-center gap-1.5 relative z-10 ${done ? "cursor-pointer" : ""}`}
+                onClick={() => { if (done) onGoTo(s.key); }}
+              >
                 <div
                   className={`
                     flex h-9 w-9 items-center justify-center rounded-full text-xs font-semibold
                     transition-all duration-500 ease-out
                     ${done
-                      ? "bg-amber text-white shadow-md shadow-amber/25"
+                      ? "bg-amber-glow text-ink shadow-md shadow-amber/25 border border-amber hover:scale-110"
                       : active
-                        ? "bg-ink text-cream shadow-lg shadow-ink/20 scale-110"
-                        : "bg-cream-dark text-ink-faint border border-border"
+                        ? "bg-amber-glow text-ink shadow-lg shadow-amber/20 scale-110 border-2 border-amber"
+                        : "bg-cream-dark text-ink border border-border"
                     }
                   `}
                 >
@@ -189,6 +192,16 @@ export function AppLayout() {
     }
   }, [itemName, condition, category, selectedFile]);
 
+  const handleGoToStep = useCallback((target: FlowStep) => {
+    // Only allow going back to completed steps (not forward past current)
+    const targetIdx = STEPS.findIndex((s) => s.key === target);
+    const currentIdx = STEPS.findIndex((s) => s.key === step);
+    if (targetIdx < currentIdx) {
+      setStep(target);
+      setApiError(null);
+    }
+  }, [step]);
+
   const stepTitle = useMemo(() => {
     switch (step) {
       case "upload": return "Upload your product photo";
@@ -218,7 +231,7 @@ export function AppLayout() {
 
           {/* Step progress — always visible */}
           <div className="w-full mb-8 mt-2">
-            <StepProgress current={step} />
+            <StepProgress current={step} onGoTo={handleGoToStep} />
           </div>
 
           {/* Page title — hidden on results (it has its own header) */}
