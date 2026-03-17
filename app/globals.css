@@ -1,5 +1,27 @@
 @import "tailwindcss";
 
+@theme {
+  --font-sans: var(--font-sans), ui-sans-serif, system-ui, sans-serif;
+  --font-serif: var(--font-serif), ui-serif, Georgia, serif;
+
+  --color-cream: #FAF9F6;
+  --color-cream-dark: #F0EDE8;
+  --color-ink: #1A1915;
+  --color-ink-light: #3D3B35;
+  --color-ink-muted: #8A8780;
+  --color-ink-faint: #C5C3BD;
+  --color-amber: #C4841D;
+  --color-amber-light: #E5A83E;
+  --color-amber-dark: #A06A10;
+  --color-amber-glow: #FEF3E2;
+  --color-sage: #5A7A60;
+  --color-sage-light: #EBF0EC;
+  --color-surface: #FFFFFF;
+  --color-border: #E8E6E1;
+  --color-border-light: #F0EDE8;
+  --color-etsy: #F56400;
+}
+
 *,
 *::before,
 *::after {
@@ -12,3 +34,87 @@ body {
   padding: 0;
 }
 
+body {
+  background-color: var(--color-cream);
+  color: var(--color-ink);
+}
+
+/* Step progress bar fill animation */
+@keyframes progress-fill {
+  from { transform: scaleX(0); }
+  to { transform: scaleX(1); }
+}
+
+.animate-progress-fill {
+  animation: progress-fill 0.5s ease-out forwards;
+  transform-origin: left;
+}
+
+/* Fade-in-up for page transitions */
+@keyframes fade-in-up {
+  from {
+    opacity: 0;
+    transform: translateY(16px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.animate-fade-in-up {
+  animation: fade-in-up 0.45s ease-out both;
+}
+
+/* Staggered children */
+.stagger-1 { animation-delay: 0.06s; }
+.stagger-2 { animation-delay: 0.12s; }
+.stagger-3 { animation-delay: 0.18s; }
+.stagger-4 { animation-delay: 0.24s; }
+
+/* Pulse glow for loading */
+@keyframes pulse-glow {
+  0%, 100% {
+    box-shadow: 0 0 0 0 rgba(196, 132, 29, 0.25);
+  }
+  50% {
+    box-shadow: 0 0 24px 8px rgba(196, 132, 29, 0.15);
+  }
+}
+
+.animate-pulse-glow {
+  animation: pulse-glow 2s ease-in-out infinite;
+}
+
+/* Spin animation for loading */
+@keyframes gentle-spin {
+  from { transform: rotate(0deg); }
+  to { transform: rotate(360deg); }
+}
+
+.animate-gentle-spin {
+  animation: gentle-spin 1.8s linear infinite;
+}
+
+/* Subtle noise texture overlay */
+.noise-bg::before {
+  content: "";
+  position: fixed;
+  inset: 0;
+  opacity: 0.025;
+  pointer-events: none;
+  background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 256 256' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='noise'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23noise)'/%3E%3C/svg%3E");
+  z-index: 50;
+}
+
+/* Smooth scrollbar */
+::-webkit-scrollbar {
+  width: 6px;
+}
+::-webkit-scrollbar-track {
+  background: transparent;
+}
+::-webkit-scrollbar-thumb {
+  background: var(--color-ink-faint);
+  border-radius: 3px;
+}

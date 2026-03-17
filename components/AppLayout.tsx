@@ -20,6 +20,34 @@ type FlowStep = "upload" | "details" | "generating" | "chatbot" | "results";
 const CONDITION_OPTIONS = ["Used", "Like New", "Good", "Fair", "Refurbished"];
 const CATEGORY_OPTIONS = ["Electronics", "Clothing", "Home & Living", "Collectibles", "Furniture", "Other"];
 
+/** Resize image to maxDim on longest side and return base64 + mime. */
+async function resizeAndEncode(
+  file: File,
+  maxDim: number,
+): Promise<{ base64: string; mimeType: string }> {
+  return new Promise((resolve, reject) => {
+    const img = new Image();
+    img.onload = () => {
+      let { width, height } = img;
+      if (width > maxDim || height > maxDim) {
+        const scale = maxDim / Math.max(width, height);
+        width = Math.round(width * scale);
+        height = Math.round(height * scale);
+      }
+      const canvas = document.createElement("canvas");
+      canvas.width = width;
+      canvas.height = height;
+      const ctx = canvas.getContext("2d")!;
+      ctx.drawImage(img, 0, 0, width, height);
+      const dataUrl = canvas.toDataURL("image/jpeg", 0.85);
+      const base64 = dataUrl.split(",")[1] || "";
+      resolve({ base64, mimeType: "image/jpeg" });
+    };
+    img.onerror = () => reject(new Error("Failed to load image"));
+    img.src = URL.createObjectURL(file);
+  });
+}
+
 export function AppLayout() {
   const [step, setStep] = useState<FlowStep>("upload");
   const [selectedFile, setSelectedFile] = useState<File | null>(null);
@@ -60,7 +88,21 @@ export function AppLayout() {
     setStep("generating");
     try {
       const name = itemName.trim() || "Item";
-      const result = await api.generateListing({ name, condition, category });
+      let imageBase64: string | undefined;
+      let imageMimeType: string | undefined;
+      if (selectedFile) {
+        const { base64, mimeType } = await resizeAndEncode(selectedFile, 1024);
+        if (base64) {
+          imageBase64 = base64;
+          imageMimeType = mimeType;
+        }
+      }
+      const result = await api.generateListing({
+        name,
+        condition,
+        category,
+        ...(imageBase64 && { imageBase64, imageMimeType }),
+      });
       if (result.error) throw new Error(result.error);
       setListing({
         title: result.title ?? "",
@@ -73,7 +115,7 @@ export function AppLayout() {
       setApiError(err instanceof Error ? err.message : "Failed to generate listing");
       setStep("details");
     }
-  }, [itemName, condition, category]);
+  }, [itemName, condition, category, selectedFile]);
 
   const title = useMemo(() => {
     switch (step) {
@@ -95,7 +137,7 @@ export function AppLayout() {
       case "upload":
         return "Upload a product photo, then add details to generate a resale listing.";
       case "details":
-        return "Name, condition, and category help the AI write a better listing.";
+        return "We’ll use your photo to recognize the item (e.g. Coke can, vintage camera). Add details below to improve the listing.";
       case "generating":
         return "Drafting a compelling title, description, and pricing.";
       case "chatbot":

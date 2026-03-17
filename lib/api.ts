@@ -9,7 +9,13 @@ export const API_BASE =
 
 export const api = {
   health: () => fetch(`${API_BASE}/health`).then((r) => r.json()),
-  generateListing: (body: { name: string; condition: string; category: string }) =>
+  generateListing: (body: {
+    name: string;
+    condition: string;
+    category: string;
+    imageBase64?: string;
+    imageMimeType?: string;
+  }) =>
     fetch(`${API_BASE}/generate-listing`, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
@@ -43,5 +49,12 @@ export const api = {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify(body ?? {}),
+    }).then((r) => r.json()),
+  /** Demo: chatbot-style Etsy assistant replies (synthetic data) */
+  simulateChat: (body: { prompt: string; listingTitle?: string }) =>
+    fetch(`${API_BASE}/simulate-chat`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(body),
     }).then((r) => r.json()),
 };

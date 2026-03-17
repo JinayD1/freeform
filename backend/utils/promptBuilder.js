@@ -3,8 +3,7 @@
  */
 
 /**
- * Build prompt for generating Etsy listing content.
- * Ensures professional tone, SEO keywords, and JSON-only output.
+ * Build prompt for generating Etsy listing content (text-only).
  */
 function buildListingPrompt({ name, condition, category }) {
   return `You are an expert Etsy seller and copywriter. Generate a professional Etsy listing for the following item.
@@ -24,6 +23,28 @@ Requirements:
 
 Respond with ONLY valid JSON, no markdown or extra text. Use this exact structure:
 {"title":"...","description":"...","tags":["tag1","tag2",...],"price":65}`;
+}
+
+/**
+ * Build prompt for vision-based listing: look at the image and generate accurate Etsy listing.
+ * User hints (name, condition, category) are optional overrides; the image is the source of truth.
+ */
+function buildVisionListingPrompt({ nameHint, conditionHint, categoryHint }) {
+  const hints = [nameHint, conditionHint, categoryHint].filter(Boolean).join(', ');
+  return `Look at this product image. Identify exactly what the item is (brand, product name, type — e.g. "Coca-Cola classic red soda can", "Vintage Sony Walkman"). Assess its apparent condition and the best category for resale.
+
+${hints ? `Seller provided these hints (use only if they fit the image): ${hints}.` : ''}
+
+Generate a professional Etsy resale listing from what you SEE in the image. Be accurate and specific: if it's a Coke can, say so; if you see branding, include it.
+
+Requirements:
+- Title: max 140 characters, specific to the item (include brand/product name if visible), keyword-rich.
+- Description: 2-4 short paragraphs describing what the item is, condition, and why a buyer would want it. Reference visible details (design, label, wear).
+- Tags: 10-13 tags as a JSON array, lowercase (e.g. ["coca-cola", "soda can", "collectible", "vintage", "can"]).
+- Price: fair resale price in USD as an integer (e.g. collectible can $5-15, vintage electronics $30-80).
+
+Respond with ONLY valid JSON, no markdown or extra text:
+{"title":"...","description":"...","tags":["tag1","tag2",...],"price":42}`;
 }
 
 /**
@@ -65,6 +86,7 @@ Generate 4 different messages in this style, with different numbers (views betwe
 
 module.exports = {
   buildListingPrompt,
+  buildVisionListingPrompt,
   buildNegotiationPrompt,
   buildEtsySimulationPrompt,
 };

@@ -1,7 +1,7 @@
 const express = require('express');
 const router = express.Router();
-const { buildListingPrompt, buildEtsySimulationPrompt } = require('../utils/promptBuilder');
-const { generateWithGemini, parseJsonFromResponse } = require('../services/gemini');
+const { buildListingPrompt, buildVisionListingPrompt, buildEtsySimulationPrompt } = require('../utils/promptBuilder');
+const { generateWithGemini, generateWithGeminiVision, parseJsonFromResponse } = require('../services/gemini');
 const { createListing } = require('../services/etsy');
 const store = require('../services/store');
 
@@ -26,17 +26,45 @@ function syntheticListing(name, condition, category) {
 
 /**
  * POST /generate-listing
- * Body: { name, condition, category }
+ * Body: { name, condition, category [, imageBase64, imageMimeType ] }
+ * If imageBase64 is provided, uses Gemini vision to recognize the product and generate an accurate listing.
  * Returns: { title, description, tags, price }
  */
 router.post('/generate-listing', async (req, res) => {
   try {
-    const { name, condition, category } = req.body || {};
+    const { name, condition, category, imageBase64, imageMimeType } = req.body || {};
     if (!name || !condition || !category) {
       return res.status(400).json({
         error: 'Missing required fields',
         required: ['name', 'condition', 'category'],
       });
+    }
+
+    const nameHint = String(name).trim() || undefined;
+    const conditionHint = String(condition).trim() || undefined;
+    const categoryHint = String(category).trim() || undefined;
+
+    if (imageBase64 && typeof imageBase64 === 'string') {
+      try {
+        const prompt = buildVisionListingPrompt({
+          nameHint,
+          conditionHint,
+          categoryHint,
+        });
+        const mime = imageMimeType || 'image/jpeg';
+        const raw = await generateWithGeminiVision(prompt, imageBase64, mime);
+        const parsed = parseJsonFromResponse(raw);
+        const result = {
+          title: parsed.title || '',
+          description: parsed.description || '',
+          tags: Array.isArray(parsed.tags) ? parsed.tags : [],
+          price: typeof parsed.price === 'number' ? parsed.price : parseInt(parsed.price, 10) || 0,
+        };
+        return res.json(result);
+      } catch (visionErr) {
+        console.warn('generate-listing vision fallback to text:', visionErr.message);
+        // Fall through to text-only below
+      }
     }
 
     try {
