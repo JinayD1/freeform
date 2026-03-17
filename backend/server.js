@@ -71,4 +71,9 @@ function startServer(port) {
     }
   });
 }
-startServer(Number(PORT) || 4000);
+
+// Export app for Vercel serverless; only start listening when run directly (e.g. node server.js)
+module.exports = app;
+if (require.main === module) {
+  startServer(Number(PORT) || 4000);
+}
